@@ -21,11 +21,14 @@ describe Capybara::Screenshot::Saver do
   let(:screenshot_path) { "#{capybara_root}/#{file_basename}.png" }
 
   let(:driver_mock) { double('Capybara driver').as_null_object }
-  let(:page_mock) { double('Capybara session page', :body => 'body', :driver => driver_mock).as_null_object }
+  let(:page_mock) {
+    double('Capybara session page', :body => 'body', :driver => driver_mock).as_null_object.tap do |m|
+      allow(m).to receive(:current_path).and_return('/')
+    end
+  }
   let(:capybara_mock) {
     double(Capybara).as_null_object.tap do |m|
       allow(m).to receive(:current_driver).and_return(:default)
-      allow(m).to receive(:current_path).and_return('/')
     end
   }
 
@@ -110,13 +113,31 @@ describe Capybara::Screenshot::Saver do
   end
 
   it 'does not save if current_path is empty' do
-    allow(capybara_mock).to receive(:current_path).and_return(nil)
+    allow(page_mock).to receive(:current_path).and_return(nil)
     expect(capybara_mock).to_not receive(:save_page)
     expect(driver_mock).to_not receive(:render)
 
     saver.save
     expect(saver).to_not be_screenshot_saved
     expect(saver).to_not be_html_saved
+  end
+
+  context 'when saving a screenshot fails' do
+    it 'still restores the original value of Capybara.save_and_open_page_path' do
+      Capybara::Screenshot.capybara_tmp_path = 'tmp/bananas'
+
+      expect(capybara_mock).to receive(:save_page).and_raise
+
+      expect {
+        saver.save
+      }.to raise_error(RuntimeError)
+
+      if Capybara.respond_to?(:save_path)
+        expect(Capybara.save_path).to eq('tmp/bananas')
+      else
+        expect(Capybara.save_and_open_page_path).to eq('tmp/bananas')
+      end
+    end
   end
 
   describe '#output_screenshot_path' do
@@ -137,6 +158,40 @@ describe Capybara::Screenshot::Saver do
       allow(saver).to receive(:screenshot_saved?).and_return(true)
       expect(saver).to receive(:output).with("Image screenshot: screenshot.png")
       saver.output_screenshot_path
+    end
+  end
+
+  describe 'callbacks' do
+    let(:saver) { Capybara::Screenshot::Saver.new(capybara_mock, page_mock) }
+
+    before do
+      allow(saver).to receive(:html_path) { 'page.html' }
+      allow(saver).to receive(:screenshot_path) { 'screenshot.png' }
+    end
+
+    before :all do
+      Capybara::Screenshot.after_save_html do |path|
+        puts "after_save_html ran with #{path}"
+      end
+      Capybara::Screenshot.after_save_screenshot do |path|
+        puts "after_save_screenshot ran with #{path}"
+      end
+    end
+
+    after :all do
+      Capybara::Screenshot::Saver.instance_eval { @callbacks = nil }
+    end
+
+    it 'runs after_save_html callbacks' do
+      expect do
+        saver.save
+      end.to output(/after_save_html ran with page\.html/).to_stdout
+    end
+
+    it 'runs after_save_screenshot callbacks' do
+      expect do
+        saver.save
+      end.to output(/after_save_screenshot ran with screenshot\.png/).to_stdout
     end
   end
 

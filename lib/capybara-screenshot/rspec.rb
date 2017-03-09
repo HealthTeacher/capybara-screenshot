@@ -3,6 +3,7 @@ require "capybara-screenshot"
 require "capybara-screenshot/rspec/text_reporter"
 require "capybara-screenshot/rspec/html_link_reporter"
 require "capybara-screenshot/rspec/html_embed_reporter"
+require "capybara-screenshot/rspec/json_reporter"
 require "capybara-screenshot/rspec/textmate_link_reporter"
 
 module Capybara
@@ -39,8 +40,10 @@ module Capybara
         "RSpec::Core::Formatters::ProgressFormatter"      => Capybara::Screenshot::RSpec::TextReporter,
         "RSpec::Core::Formatters::DocumentationFormatter" => Capybara::Screenshot::RSpec::TextReporter,
         "RSpec::Core::Formatters::HtmlFormatter"          => Capybara::Screenshot::RSpec::HtmlLinkReporter,
+        "RSpec::Core::Formatters::JsonFormatter"          => Capybara::Screenshot::RSpec::JsonReporter,
         "RSpec::Core::Formatters::TextMateFormatter"      => Capybara::Screenshot::RSpec::TextMateLinkReporter, # RSpec 2
-        "RSpec::Mate::Formatters::TextMateFormatter"      => Capybara::Screenshot::RSpec::TextMateLinkReporter  # RSpec 3
+        "RSpec::Mate::Formatters::TextMateFormatter"      => Capybara::Screenshot::RSpec::TextMateLinkReporter,  # RSpec 3
+        "Fuubar"                                          => Capybara::Screenshot::RSpec::TextReporter
       }
 
       class << self
@@ -52,7 +55,7 @@ module Capybara
               if Capybara.page.current_url != '' && Capybara::Screenshot.autosave_on_failure && example.exception
                 filename_prefix = Capybara::Screenshot.filename_prefix_for(:rspec, example)
 
-                saver = Capybara::Screenshot::Saver.new(Capybara, Capybara.page, true, filename_prefix)
+                saver = Capybara::Screenshot.new_saver(Capybara, Capybara.page, true, filename_prefix)
                 saver.save
 
                 example.metadata[:screenshot] = {}

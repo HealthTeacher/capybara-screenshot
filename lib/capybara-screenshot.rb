@@ -9,6 +9,7 @@ module Capybara
       attr_accessor :webkit_options
       attr_writer   :final_session_name
       attr_accessor :prune_strategy
+      attr_accessor :s3_configuration
     end
 
     self.autosave_on_failure = true
@@ -18,6 +19,7 @@ module Capybara
     self.append_random = false
     self.webkit_options = {}
     self.prune_strategy = :keep_all
+    self.s3_configuration = {}
 
     def self.append_screenshot_path=(value)
       $stderr.puts "WARNING: Capybara::Screenshot.append_screenshot_path is deprecated. " +
@@ -26,18 +28,20 @@ module Capybara
     end
 
     def self.screenshot_and_save_page
-      saver = Saver.new(Capybara, Capybara.page)
-      saver.save
-      {:html => saver.html_path, :image => saver.screenshot_path}
+      saver = new_saver(Capybara, Capybara.page)
+      if saver.save
+        {:html => saver.html_path, :image => saver.screenshot_path}
+      end
     end
 
     def self.screenshot_and_open_image
       require "launchy"
 
-      saver = Saver.new(Capybara, Capybara.page, false)
-      saver.save
-      Launchy.open saver.screenshot_path
-      {:html => nil, :image => saver.screenshot_path}
+      saver = new_saver(Capybara, Capybara.page, false)
+      if saver.save
+        Launchy.open saver.screenshot_path
+        {:html => nil, :image => saver.screenshot_path}
+      end
     end
 
     class << self
@@ -52,14 +56,10 @@ module Capybara
     end
 
     def self.capybara_root
-      return @capybara_root if defined?(@capybara_root)
-      #If the path isn't set, default to the current directory
-      capybara_tmp_path = Capybara.save_and_open_page_path || '.'
-
-      @capybara = if defined?(::Rails)
+      @capybara_root ||= if defined?(::Rails) && ::Rails.root.present?
         ::Rails.root.join capybara_tmp_path
       elsif defined?(Padrino)
-        Padrino.root capybara_tmp_path
+        File.expand_path(capybara_tmp_path, Padrino.root)
       elsif defined?(Sinatra)
         File.join(Sinatra::Application.root, capybara_tmp_path)
       else
@@ -90,6 +90,51 @@ module Capybara
     # Reset prune history allowing further prunining on next failure
     def self.reset_prune_history
       @pruned_previous_screenshots = nil
+    end
+
+    def self.new_saver(*args)
+      saver = Saver.new(*args)
+
+      unless s3_configuration.empty?
+        require 'capybara-screenshot/s3_saver'
+        saver = S3Saver.new_with_configuration(saver, s3_configuration)
+      end
+
+      return saver
+    end
+
+    def self.after_save_html &block
+      Saver.after_save_html &block
+    end
+
+    def self.after_save_screenshot &block
+      Saver.after_save_screenshot &block
+    end
+
+    private
+
+    # If the path isn't set, default to the current directory
+    def self.capybara_tmp_path
+      # `#save_and_open_page_path` is deprecated
+      # https://github.com/jnicklas/capybara/blob/48ab1ede946dec2250a2d1d8cbb3313f25096456/History.md#L37
+      if Capybara.respond_to?(:save_path)
+        Capybara.save_path
+      else
+        Capybara.save_and_open_page_path
+      end || '.'
+    end
+
+    # Configure the path unless '.'
+    def self.capybara_tmp_path=(path)
+      return if path == '.'
+
+      # `#save_and_open_page_path` is deprecated
+      # https://github.com/jnicklas/capybara/blob/48ab1ede946dec2250a2d1d8cbb3313f25096456/History.md#L37
+      if Capybara.respond_to?(:save_path)
+        Capybara.save_path = path
+      else
+        Capybara.save_and_open_page_path = path
+      end
     end
   end
 end

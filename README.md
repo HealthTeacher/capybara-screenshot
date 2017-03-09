@@ -59,6 +59,15 @@ Typically in 'test/test_helper.rb', please add:
 require 'capybara-screenshot/minitest'
 ```
 
+Also, consider adding `include Capybara::Screenshot::MiniTestPlugin` to any test classes that fail. For example, to capture screenshots for all failing integration tests in minitest-rails, try something like:
+
+```ruby
+class ActionDispatch::IntegrationTest
+  include Capybara::Screenshot::MiniTestPlugin
+  # ...
+end
+```
+
 #### Test::Unit
 
 Typically in 'test/test_helper.rb', please add:
@@ -104,6 +113,22 @@ Capybara::Screenshot.screenshot_and_save_page
 Capybara::Screenshot.screenshot_and_open_image
 ```
 
+Better looking HTML screenshots
+-------------------------------
+
+By the default, HTML screenshots will not look very good when opened in a browser.  This happens because the browser can't correctly resolve relative paths like `<link href="/assets/...." />`, which stops CSS, images, etc... from beind loaded.  To get a nicer looking page, configure Capybara with:
+
+```ruby
+Capybara.asset_host = 'http://localhost:3000'
+```
+
+This will cause Capybara to add `<base>http://localhost:3000</base>` to the HTML file, which gives the browser enough information to resolve relative paths.  Next, start a rails server in development mode, on port 3000, to respond to requests for assets:
+
+```bash
+rails s -p 3000
+```
+
+Now when you open the page, you should have something that looks much better.  You can leave this setup in place and use the default HTML pages when you don't care about the presentation, or start the rails server when you need something better looking.  
 
 Driver configuration
 --------------------
@@ -157,10 +182,36 @@ Capybara::Screenshot.append_timestamp = false
 
 Custom screenshot directory
 --------------------------
-By default screenshots are saved into `$APPLICATION_ROOT/tmp/capybara`. If you want to customize the location, override the file path as:
+By default, when running under Rails, Sinatra, and Padrino, screenshots are saved into `$APPLICATION_ROOT/tmp/capybara`. Otherwise, they're saved under `Dir.pwd`.
+If you want to customize the location, override the file path as:
 
 ```ruby
-Capybara.save_and_open_page_path = "/file/path"
+Capybara.save_path = "/file/path"
+```
+
+
+Uploading screenshots to S3
+--------------------------
+You can configure capybara-screenshot to automatically save your screenshots to an AWS S3 bucket.
+
+First, install the `aws-sdk` gem or add it to your Gemfile
+
+```ruby
+gem 'capybara-screenshot', :group => :test
+gem 'aws-sdk', :group => :test
+```
+
+Next, configure capybara-screenshot with your S3 credentials, the bucket to save to, and an optional region (default: `us-east-1`).
+
+```ruby
+Capybara::Screenshot.s3_configuration = {
+  s3_client_credentials: {
+    access_key_id: "my_access_key_id",
+    secret_access_key: "my_secret_access_key",
+    region: "eu-central-1"
+  },
+  bucket_name: "my_screenshots"
+}
 ```
 
 
@@ -176,6 +227,30 @@ Capybara::Screenshot.prune_strategy = :keep_last_run
 Capybara::Screenshot.prune_strategy = { keep: 20 }
 ```
 
+Callbacks
+---------
+
+You can hook your own logic into callbacks after the html/screenshot has been saved.
+
+```ruby
+# after Saver#save_html
+Capybara::Screenshot.after_save_html do |path|
+  mail = Mail.new do
+    delivery_method :sendmail
+    from     'capybara-screenshot@example.com'
+    to       'dev@example.com'
+    subject  'Capybara Screenshot'
+    add_file File.read path
+  end
+  mail.delivery_method :sendmail
+  mail.deliver
+end
+
+# after Saver#save_screenshot
+Capybara::Screenshot.after_save_screenshot do |path|
+  # ...
+end
+```
 
 Information about screenshots in RSpec output
 ---------------------------------------------
@@ -219,7 +294,7 @@ Please raise an issue at [https://github.com/mattheworiordan/capybara-screenshot
 
 #### Contributions
 
-Contributions are welcome.  Please fork this gem, and submit a pull request.  New features must include test coverage and must pass on all versions of the testing frameworks supported.  Run `appraisal "bundle exec rspec && bundle exec cucumber"` locally to test your changes against all versions of testing framework gems supported.
+Contributions are welcome.  Please fork this gem, and submit a pull request.  New features must include test coverage and must pass on all versions of the testing frameworks supported.  Run `appraisal` to set up the your Gems. then `appraisal "rake travis:ci"` locally to test your changes against all versions of testing framework gems supported.
 
 #### Rubygems
 
@@ -237,4 +312,4 @@ This gem was written by **Matthew O'Riordan**, with contributions from [many kin
 License
 -------
 
-Copyright © 2014 Matthew O'Riordan, inc. It is free software, and may be redistributed under the terms specified in the LICENSE file.
+Copyright © 2016 Matthew O'Riordan, inc. It is free software, and may be redistributed under the terms specified in the LICENSE file.

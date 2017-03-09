@@ -9,7 +9,7 @@ After do |scenario|
     Capybara.using_session(Capybara::Screenshot.final_session_name) do
       filename_prefix = Capybara::Screenshot.filename_prefix_for(:cucumber, scenario)
 
-      saver = Capybara::Screenshot::Saver.new(Capybara, Capybara.page, true, filename_prefix)
+      saver = Capybara::Screenshot.new_saver(Capybara, Capybara.page, true, filename_prefix)
       saver.save
       saver.output_screenshot_path
 
@@ -18,8 +18,9 @@ After do |scenario|
         require "base64"
         #encode the image into it's base64 representation
         image = open(saver.screenshot_path, 'rb') {|io|io.read}
-        encoded_img = Base64.encode64(image)
+        saver.display_image
         #this will embed the image in the HTML report, embed() is defined in cucumber
+        encoded_img = Base64.encode64(image)
         embed(encoded_img, 'image/png;base64', "Screenshot of the error")
       end
     end

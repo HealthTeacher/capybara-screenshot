@@ -20,7 +20,7 @@ module CommonSetup
     target.let(:setup_test_app) do
       <<-RUBY
         require 'support/test_app'
-        Capybara.save_and_open_page_path = '#{screenshot_path}'
+        Capybara::Screenshot.capybara_tmp_path = '#{screenshot_path}'
         Capybara.app = TestApp
         Capybara::Screenshot.append_timestamp = false
         #{@additional_setup_steps}
@@ -30,6 +30,14 @@ module CommonSetup
     target.before do
       if ENV['BUNDLE_GEMFILE'] && ENV['BUNDLE_GEMFILE'].match(/^\.|^[^\/\.]/)
         ENV['BUNDLE_GEMFILE'] = File.join(gem_root, ENV['BUNDLE_GEMFILE'])
+      end
+    end
+
+    target.after(:each) do |example|
+      if example.exception
+        puts "Output from failed Aruba test:"
+        puts all_output.split(/\n/).map { |line| "   #{line}"}
+        puts ""
       end
     end
 
@@ -49,11 +57,11 @@ module CommonSetup
     end
 
     def assert_screenshot_pruned
-      check_file_presence Array(screenshot_for_pruning_path), false
+      expect(screenshot_for_pruning_path).to_not be_an_existing_file
     end
 
     def assert_screenshot_not_pruned
-      check_file_presence Array(screenshot_for_pruning_path), true
+      expect(screenshot_for_pruning_path).to be_an_existing_file
     end
   end
 end

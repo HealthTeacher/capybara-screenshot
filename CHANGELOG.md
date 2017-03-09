@@ -1,3 +1,48 @@
+15 Sep 2016 - 1.0.13 -> 1.0.14
+
+* CI stable again - dropped CI support for older versions of Ruby and JRuby.  It is just too painful and there is no evidence that our users need this or that Capybara Screenshot is indeed broken.  It is better to have a reliable build system so that PRs can get merged in reliably and easily.
+* Fixed an inconsistency in the use of `save_and_open_page_path`
+* Improved debugging of Aruba tests so that contributors can easily understand why their builds break
+* Path fixes thanks to [Ryan McGarvey](https://github.com/ryanmcgarvey)
+
+23 May 2016 - 1.0.12 -> 1.0.13
+
+* Fixes [mkmf bug 162](https://github.com/mattheworiordan/capybara-screenshot/issues/162) and [mkmf bug 174](https://github.com/mattheworiordan/capybara-screenshot/issues/174)
+* Fix for `Capybara.save_path` method existence assumption
+
+29 March 2016 - 1.0.11 -> 1.0.12
+
+* [Aruba upgrade - passing CI](https://github.com/mattheworiordan/capybara-screenshot/pull/156)
+* [imgcat support](https://github.com/mattheworiordan/capybara-screenshot/pull/153)
+* [Fix for capaybara root when Rails not defined](https://github.com/mattheworiordan/capybara-screenshot/pull/139)
+* [Fix using_session_with_screenshot](https://github.com/mattheworiordan/capybara-screenshot/pull/132)
+* [Skip screenshot on skipped test](https://github.com/mattheworiordan/capybara-screenshot/pull/131)
+* [Don't output screenshot paths if not saved](https://github.com/mattheworiordan/capybara-screenshot/pull/128)
+
+22 July 2015 - 1.0.10 -> 1.0.11
+
+* [Support for Fuubar reporter](https://github.com/mattheworiordan/capybara-screenshot/pull/137)
+
+Thanks to [Kai Schlichting](https://github.com/lacco)
+
+29 June 2015 - 1.0.9 -> 1.0.10
+
+* [Small fix to memoization](https://github.com/mattheworiordan/capybara-screenshot/pull/134) plus [mini refactor](https://github.com/mattheworiordan/capybara-screenshot/commit/1db950bc53c729b26b8881d058a8781d6e7611b8)
+
+Thanks to [Systho](https://github.com/Systho)
+
+6 April 2015 - 1.0.8 -> 1.0.9
+-----------
+
+* [Improved file links within screenshot output](https://github.com/mattheworiordan/capybara-screenshot/pull/123)
+
+Thanks to [Jan Lelis](https://github.com/janlelis)
+
+6 April 2015 - 1.0.7 -> 1.0.8
+-----------
+
+* Less aggressive pruning
+
 9 March 2015 - 1.0.6 -> 1.0.7
 -----------
 

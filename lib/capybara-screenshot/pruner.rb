@@ -8,13 +8,14 @@ module Capybara
 
         @strategy_proc = case strategy
         when :keep_all
-          -> { }
+          lambda { }
         when :keep_last_run
-          -> { prune_with_last_run_strategy }
+          lambda { prune_with_last_run_strategy }
         when Hash
           raise ArgumentError, ":keep key is required" unless strategy[:keep]
+          raise ArgumentError, ":keep must be a Integer" unless strategy[:keep].kind_of?(Integer)
           raise ArgumentError, ":keep value must be number greater than zero" unless strategy[:keep].to_i > 0
-          -> { prune_with_numeric_strategy(strategy[:keep].to_i) }
+          lambda { prune_with_numeric_strategy(strategy[:keep].to_i) }
         else
           fail "Invalid prune strategy #{strategy}. `:keep_all`or `{ keep: 10 }` are valid examples."
         end
@@ -28,7 +29,7 @@ module Capybara
       attr_reader :strategy_proc
 
       def wildcard_path
-        File.expand_path('*', Screenshot.capybara_root)
+        File.expand_path('*.{html,png}', Screenshot.capybara_root)
       end
 
       def prune_with_last_run_strategy
